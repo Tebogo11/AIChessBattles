@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.convex
+.vite
+*.local
+
+# build info
+tsconfig.tsbuildinfo
+
+# ralph-loop local state
+**/.claude/ralph-loop.local.md
