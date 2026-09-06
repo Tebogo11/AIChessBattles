@@ -1,16 +1,24 @@
-import { useMemo } from "react";
-import { createRandomBot } from "./bots/randomBot";
-import type { Side } from "./game/types";
-import type { ChessBot } from "./bots/types";
-import { MatchScreen } from "./ui/MatchScreen";
+import { ConvexProvider } from "convex/react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { convex } from "./convex";
+import { LocalMatchRoute } from "./routes/LocalMatchRoute";
+import { NewMatchRoute } from "./routes/NewMatchRoute";
+import { PersistedMatchRoute } from "./routes/PersistedMatchRoute";
 
 export function App() {
-  // Milestone 1: two random movers. Real models arrive behind this same
-  // interface, so nothing above here changes when they do.
-  const bots = useMemo<Record<Side, ChessBot>>(
-    () => ({ w: createRandomBot("White (random)"), b: createRandomBot("Black (random)") }),
-    [],
-  );
+  // No deployment configured yet: run the in-memory skeleton so the app still
+  // works before `npx convex dev` has been run (SPEC §3, and src/convex.ts).
+  if (!convex) return <LocalMatchRoute />;
 
-  return <MatchScreen bots={bots} />;
+  return (
+    <ConvexProvider client={convex}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<NewMatchRoute />} />
+          <Route path="/match/:matchId" element={<PersistedMatchRoute />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ConvexProvider>
+  );
 }

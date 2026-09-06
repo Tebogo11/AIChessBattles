@@ -1,17 +1,26 @@
 import { Chessboard } from "react-chessboard";
-import type { ChessBot } from "../bots/types";
 import { MAX_FULL_MOVES } from "../game/engine";
-import { useMatch } from "../game/useMatch";
 import { TERMINATION_LABEL } from "../game/types";
-import type { Side } from "../game/types";
+import type { Match } from "../game/useMatch";
 import { BotPanel } from "./BotPanel";
 
 interface MatchScreenProps {
-  bots: Record<Side, ChessBot>;
+  match: Match;
+  whiteName: string;
+  blackName: string;
+  /** Shown under the header; used to flag local-only mode. */
+  subtitle?: string;
+  /** "New game" action. Local mode resets; persisted mode navigates. */
+  onNewGame?: () => void;
 }
 
-export function MatchScreen({ bots }: MatchScreenProps) {
-  const match = useMatch({ bots });
+export function MatchScreen({
+  match,
+  whiteName,
+  blackName,
+  subtitle,
+  onNewGame,
+}: MatchScreenProps) {
   const { plies, runState, result, fen, toMove, thinking } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
 
@@ -19,12 +28,12 @@ export function MatchScreen({ bots }: MatchScreenProps) {
     <div className="app">
       <header className="app__header">
         <h1>AI Chess Battles</h1>
-        <p className="app__tagline">Skeleton — two random movers, no AI yet.</p>
+        {subtitle ? <p className="app__tagline">{subtitle}</p> : null}
       </header>
 
       <main className="board-layout">
         <BotPanel
-          name={bots.w.name}
+          name={whiteName}
           side="w"
           plies={plies}
           active={toMove === "w"}
@@ -71,21 +80,21 @@ export function MatchScreen({ bots }: MatchScreenProps) {
             >
               → Step
             </button>
-            <button type="button" onClick={match.reset} disabled={plies.length === 0}>
-              ↺ New game
-            </button>
+            {onNewGame ? (
+              <button type="button" onClick={onNewGame}>
+                ↺ New game
+              </button>
+            ) : null}
           </div>
 
           <section className="speech-log" aria-label="Match talk">
             <h2>Match talk</h2>
-            <p className="speech-log__empty">
-              Bots start talking once a real model is playing.
-            </p>
+            <p className="speech-log__empty">Bots start talking once a real model is playing.</p>
           </section>
         </div>
 
         <BotPanel
-          name={bots.b.name}
+          name={blackName}
           side="b"
           plies={plies}
           active={toMove === "b"}
