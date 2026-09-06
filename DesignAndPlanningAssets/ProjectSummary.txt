@@ -1,0 +1,19 @@
+AI Chess Battles 
+
+I want you to create a web app called AI Chess Battles. 
+The idea is that you start by writing two prompts, one for the first bot and the other for the second bot; you can give them names
+what these prompts will do is affect their behaviour throughout the match, so you could have 
+one bot that should play aggressively, and the other that should always aim to capture their opponent in a trap.
+Or you can be a lot more direct and detailed
+- one bot should play like Li mu a character from kingdom manga a straigiest genral, ( the ai should try do online research to a character if one is giving)
+- Bot two should play like a famous chess player 
+The idea is that after the AI gets the data, it should try to create a persona, using some research to best capture the prompt given 
+and then these personas will play head-to-head, making choices best on who they are and powered by the intelligence of their selected AI model 
+
+Throughout the game, the user will be able to see the AI's thoughts and what it's planning next; this context should remain invisible to the other AI, but do have a public speech in the chat to allow the AI to talk as the game goes. So internal thoughts and speech, with internal thoughts being visible to the user only and speech visible to both user and bot
+
+a few challenges we need to tackle, 
+- we want the user to be able to battle different AI models to test them head-on, so we'll need a library that can handle that, likely LangChain + Ollama
+- Not too sure if I need a database for now; maybe somewhere to store previous prompts and user data in case I scale up, but for now it's simply a game; then it starts again after they refresh
+- but since it's AI-driven and I'll be using Ollama + LangChain, and I can't just make it free unless it's cheap to run, then maybe I can bankroll it with ads 
+- If AI makes an invalid move, it should be told so, with robust error handling, so it can be told what it did wrong and fix it.  
