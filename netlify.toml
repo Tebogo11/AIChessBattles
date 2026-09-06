@@ -1,0 +1,19 @@
+# Netlify build + SPA routing config (SPEC §3).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Match and replay URLs (/match/<id>) are client-routed. Without this catch-all,
+# refreshing or opening a shared replay link returns Netlify's 404 instead of
+# the app — which breaks the most important path in §10 and §12. In-app
+# navigation hides the bug, so always test by opening a link in a fresh tab.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Convex is provisioned separately (`npx convex dev` / `npx convex deploy`).
+# Set VITE_CONVEX_URL in the Netlify site's environment variables — it is a
+# public deployment URL, safe to expose. Never put a provider API key here as a
+# VITE_-prefixed var: it would ship in the bundle to every visitor (SPEC §9.3).
