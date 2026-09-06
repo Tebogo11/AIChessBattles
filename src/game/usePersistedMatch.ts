@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { botFromConfig } from "../bots/fromConfig";
 import { detectTermination, legalMoves, replay } from "./engine";
 import { toPly } from "./toPly";
@@ -9,20 +9,45 @@ import type { Match } from "./useMatch";
 import type { RunState, Side } from "./types";
 
 /**
- * The persisted twin of {@link useMatch}. Same surface, but the ply log lives in
- * Convex: every completed ply is appended as it happens, and opening the match
- * URL in a fresh tab rebuilds the game from stored history (SPEC §7, §8).
+ * A match still marked "running" but silent for this long is treated as stalled:
+ * the tab that was driving it went away without cleanly marking it. Detecting
+ * staleness this way is more reliable than depending on an unload handler, which
+ * browsers do not guarantee to run (SPEC §8).
  */
-export function usePersistedMatch(matchId: Id<"matches">): Match | null {
+const STALE_MS = 15_000;
+
+export interface PersistedMatch {
+  /** Null while loading or when the match is not found. */
+  view: Match | null;
+  /** The stored match document, once loaded. */
+  doc: Doc<"matches"> | null;
+  /** True when the match needs an explicit Resume before it will drive. */
+  resumeNeeded: boolean;
+  resume: () => void;
+  /** True once both queries have resolved. */
+  loaded: boolean;
+  notFound: boolean;
+}
+
+/**
+ * The persisted twin of {@link useMatch}. Same view surface, but the ply log
+ * lives in Convex: every completed ply is appended as it happens, and opening
+ * the match URL in a fresh tab rebuilds the game from stored history. A stalled
+ * match is not driven until the viewer resumes it (SPEC §7, §8).
+ */
+export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
   const match = useQuery(api.matches.get, { matchId });
   const rows = useQuery(api.plies.list, { matchId });
   const append = useMutation(api.plies.append);
   const finish = useMutation(api.matches.finish);
+  const markStalled = useMutation(api.matches.markStalled);
+  const resumeMutation = useMutation(api.matches.resume);
 
-  // Local pause is per-tab and not persisted: pausing one viewer shouldn't stop
-  // the match for everyone. The match doc's status is the durable state.
   const [paused, setPaused] = useState(false);
   const [thinking, setThinking] = useState(false);
+  // Once the viewer resumes, this tab may drive even if the doc was briefly
+  // still flagged stalled/stale.
+  const [resumed, setResumed] = useState(false);
   const busyRef = useRef(false);
 
   const plies = (rows ?? []).map(toPly);
@@ -40,13 +65,29 @@ export function usePersistedMatch(matchId: Id<"matches">): Match | null {
   const fen = game.fen();
   const toMove = liveResult ? null : (game.turn() as Side);
 
+  const finished = Boolean(match && (match.status === "finished" || liveResult));
+  const stale =
+    !!match && match.status === "running" && Date.now() - match.lastActivityAt > STALE_MS;
+  const resumeNeeded =
+    !!match && !finished && !resumed && (match.status === "stalled" || stale);
+
   const runState: RunState = !match
     ? "idle"
-    : match.status === "finished" || liveResult
+    : finished
       ? "finished"
-      : paused || match.status === "stalled"
+      : paused || resumeNeeded
         ? "paused"
         : "running";
+
+  // Best-effort: mark a running match stalled when this tab goes away. Not
+  // relied upon — staleness detection above is the real safety net.
+  useEffect(() => {
+    const onHide = () => {
+      if (matchRef.current?.status === "running") void markStalled({ matchId });
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [markStalled, matchId]);
 
   const runOnePly = useCallback(async () => {
     if (busyRef.current) return;
@@ -76,7 +117,7 @@ export function usePersistedMatch(matchId: Id<"matches">): Match | null {
       });
       current.move(decision.san);
       // Idempotent on (matchId, index): a duplicate append is a no-op, so a
-      // regenerated move after a tab death can't create a second ply.
+      // move regenerated after a tab death can't create a second ply.
       await append({
         matchId,
         index: log.length,
@@ -114,21 +155,27 @@ export function usePersistedMatch(matchId: Id<"matches">): Match | null {
   }, [runOnePly]);
   const reset = useCallback(() => {
     // A persisted match is immutable history; "new game" is a navigation, not a
-    // truncation. Handled by the route, so this is a no-op here.
+    // truncation. Handled by the route.
   }, []);
 
-  if (match === undefined || rows === undefined) return null;
+  const resume = useCallback(() => {
+    setResumed(true);
+    setPaused(false);
+    void resumeMutation({ matchId });
+  }, [resumeMutation, matchId]);
+
+  const loaded = match !== undefined && rows !== undefined;
+  const view: Match | null =
+    loaded && match
+      ? { plies, runState, result: liveResult, fen, toMove, thinking, play, pause, step, reset }
+      : null;
 
   return {
-    plies,
-    runState,
-    result: liveResult,
-    fen,
-    toMove,
-    thinking,
-    play,
-    pause,
-    step,
-    reset,
+    view,
+    doc: match ?? null,
+    resumeNeeded,
+    resume,
+    loaded,
+    notFound: match === null,
   };
 }

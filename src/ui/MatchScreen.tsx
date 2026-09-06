@@ -2,6 +2,7 @@ import { Chessboard } from "react-chessboard";
 import { MAX_FULL_MOVES } from "../game/engine";
 import { TERMINATION_LABEL } from "../game/types";
 import type { Match } from "../game/useMatch";
+import { useScrub } from "../game/useScrub";
 import { BotPanel } from "./BotPanel";
 
 interface MatchScreenProps {
@@ -23,6 +24,7 @@ export function MatchScreen({
 }: MatchScreenProps) {
   const { plies, runState, result, fen, toMove, thinking } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
+  const scrub = useScrub(plies, fen);
 
   return (
     <div className="app">
@@ -44,7 +46,7 @@ export function MatchScreen({
           <div className="board">
             <Chessboard
               options={{
-                position: fen,
+                position: scrub.fen,
                 allowDragging: false,
                 animationDurationInMs: 200,
                 id: "match-board",
@@ -53,7 +55,14 @@ export function MatchScreen({
           </div>
 
           <div className="statusbar" role="status">
-            {result ? (
+            {scrub.scrubbing ? (
+              <span>
+                Reviewing ply {scrub.viewingPly} of {scrub.totalPlies} —{" "}
+                <button type="button" className="linkbtn" onClick={scrub.live}>
+                  back to live
+                </button>
+              </span>
+            ) : result ? (
               <strong>
                 {TERMINATION_LABEL[result.reason]}
                 {result.winner ? ` — ${result.winner === "w" ? "White" : "Black"} wins` : ""}
@@ -63,6 +72,31 @@ export function MatchScreen({
                 Move {fullMove} of {MAX_FULL_MOVES} · {toMove === "w" ? "White" : "Black"} to play
               </span>
             )}
+          </div>
+
+          <div className="transport transport--scrub">
+            <button type="button" onClick={scrub.first} disabled={plies.length === 0} title="First position">
+              ⏮
+            </button>
+            <button type="button" onClick={scrub.back} disabled={plies.length === 0} title="Back one ply">
+              ←
+            </button>
+            <button
+              type="button"
+              onClick={scrub.forward}
+              disabled={!scrub.scrubbing}
+              title="Forward one ply"
+            >
+              →
+            </button>
+            <button
+              type="button"
+              onClick={scrub.live}
+              disabled={!scrub.scrubbing}
+              title="Return to the live game"
+            >
+              ⏭ Live
+            </button>
           </div>
 
           <div className="transport">
