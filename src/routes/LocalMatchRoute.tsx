@@ -1,29 +1,54 @@
-import { useMemo } from "react";
-import { createRandomBot } from "../bots/randomBot";
+import { useMemo, useState } from "react";
+import { botFromConfig } from "../bots/fromConfig";
 import type { ChessBot } from "../bots/types";
+import { assignColors } from "../game/assignColors";
+import type { BotConfig } from "../game/botConfig";
 import type { Side } from "../game/types";
 import { useMatch } from "../game/useMatch";
 import { MatchScreen } from "../ui/MatchScreen";
+import { SetupScreen, type SetupValues } from "../ui/SetupScreen";
 
 /**
- * Convex isn't configured (VITE_CONVEX_URL blank). The match plays entirely in
- * memory and a refresh loses it — ticket #1 behaviour. Set VITE_CONVEX_URL to
- * get persistence and shareable URLs.
+ * Convex isn't configured (VITE_CONVEX_URL blank), so the whole setup → match
+ * flow runs in memory and a refresh loses it — ticket #1 behaviour. Set
+ * VITE_CONVEX_URL for persistence and shareable URLs.
  */
 export function LocalMatchRoute() {
+  const [matchup, setMatchup] = useState<{ white: BotConfig; black: BotConfig } | null>(null);
+
+  if (!matchup) {
+    return (
+      <SetupScreen
+        onStart={(values: SetupValues) =>
+          setMatchup(assignColors(values.first, values.second, values.randomizeColors))
+        }
+      />
+    );
+  }
+
+  return <LocalMatch matchup={matchup} onNewGame={() => setMatchup(null)} />;
+}
+
+function LocalMatch({
+  matchup,
+  onNewGame,
+}: {
+  matchup: { white: BotConfig; black: BotConfig };
+  onNewGame: () => void;
+}) {
   const bots = useMemo<Record<Side, ChessBot>>(
-    () => ({ w: createRandomBot("White (random)"), b: createRandomBot("Black (random)") }),
-    [],
+    () => ({ w: botFromConfig(matchup.white), b: botFromConfig(matchup.black) }),
+    [matchup],
   );
   const match = useMatch({ bots });
 
   return (
     <MatchScreen
       match={match}
-      whiteName={bots.w.name}
-      blackName={bots.b.name}
+      whiteName={matchup.white.name}
+      blackName={matchup.black.name}
       subtitle="Local-only mode — set VITE_CONVEX_URL to persist matches and get shareable links."
-      onNewGame={match.reset}
+      onNewGame={onNewGame}
     />
   );
 }

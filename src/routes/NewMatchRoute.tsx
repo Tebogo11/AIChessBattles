@@ -1,30 +1,30 @@
 import { useMutation } from "convex/react";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
-import { RANDOM_MATCHUP } from "../game/botConfig";
+import { assignColors } from "../game/assignColors";
+import { SetupScreen, type SetupValues } from "../ui/SetupScreen";
 
 /**
- * Landing action for the persisted app: create a match and redirect to its URL.
- * Milestone 1 starts a random-vs-random match; the setup screen (ticket #5)
- * replaces this with real config.
+ * The setup screen for the persisted app: collect prompts, create a match with
+ * them stored, and redirect to its URL (SPEC §9.1). Colour is assigned at
+ * creation so the stored white/black already reflect the choice (SPEC §4.6).
  */
 export function NewMatchRoute() {
   const create = useMutation(api.matches.create);
   const navigate = useNavigate();
-  const started = useRef(false);
+  const [starting, setStarting] = useState(false);
 
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    void create({ white: RANDOM_MATCHUP.white, black: RANDOM_MATCHUP.black }).then((id) =>
-      navigate(`/match/${id}`, { replace: true }),
-    );
-  }, [create, navigate]);
+  const start = async (values: SetupValues) => {
+    setStarting(true);
+    const { white, black } = assignColors(values.first, values.second, values.randomizeColors);
+    try {
+      const id = await create({ white, black });
+      void navigate(`/match/${id}`);
+    } catch {
+      setStarting(false);
+    }
+  };
 
-  return (
-    <div className="app">
-      <p>Starting a new match…</p>
-    </div>
-  );
+  return <SetupScreen onStart={(v) => void start(v)} starting={starting} />;
 }
