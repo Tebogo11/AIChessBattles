@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { botFromConfig } from "../bots/fromConfig";
-import { detectTermination, legalMoves, replay } from "./engine";
+import { buildBotContext } from "./buildContext";
+import { detectTermination, replay } from "./engine";
 import { toPly } from "./toPly";
 import type { Match } from "./useMatch";
 import type { RunState, Side } from "./types";
@@ -109,12 +110,9 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
     const config = side === "w" ? m.white : m.black;
     const startedAt = Date.now();
     try {
-      const decision = await botFromConfig(config).decide({
-        side,
-        fen: current.fen(),
-        history: current.history(),
-        legalMoves: legalMoves(current),
-      });
+      const decision = await botFromConfig(config).decide(
+        buildBotContext(side, current, log, { w: m.white, b: m.black }),
+      );
       current.move(decision.san);
       // Idempotent on (matchId, index): a duplicate append is a no-op, so a
       // move regenerated after a tab death can't create a second ply.

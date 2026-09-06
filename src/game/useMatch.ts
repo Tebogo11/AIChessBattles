@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { botFromConfig } from "../bots/fromConfig";
 import type { ChessBot } from "../bots/types";
-import { detectTermination, legalMoves, replay } from "./engine";
+import type { BotConfig } from "./botConfig";
+import { buildBotContext } from "./buildContext";
+import { detectTermination, replay } from "./engine";
 import type { MatchResult, Ply, RunState, Side } from "./types";
 
 export interface UseMatchOptions {
-  bots: Record<Side, ChessBot>;
+  configs: Record<Side, BotConfig>;
   /** Pause between plies during autoplay, so a random game stays watchable. */
   moveDelayMs?: number;
 }
@@ -26,17 +29,24 @@ export interface Match {
   reset: () => void;
 }
 
-export function useMatch({ bots, moveDelayMs = 350 }: UseMatchOptions): Match {
+export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match {
   const [plies, setPlies] = useState<Ply[]>([]);
   const [runState, setRunState] = useState<RunState>("idle");
   const [result, setResult] = useState<MatchResult | null>(null);
   const [thinking, setThinking] = useState(false);
+
+  const bots = useMemo<Record<Side, ChessBot>>(
+    () => ({ w: botFromConfig(configs.w), b: botFromConfig(configs.b) }),
+    [configs],
+  );
 
   // The log is also read inside async work, where state would be stale.
   const pliesRef = useRef(plies);
   pliesRef.current = plies;
   const botsRef = useRef(bots);
   botsRef.current = bots;
+  const configsRef = useRef(configs);
+  configsRef.current = configs;
   // One decision at a time. Autoplay and a manual step can both fire.
   const busyRef = useRef(false);
 
@@ -52,15 +62,12 @@ export function useMatch({ bots, moveDelayMs = 350 }: UseMatchOptions): Match {
 
     busyRef.current = true;
     setThinking(true);
-    const side = current.turn();
+    const side = current.turn() as Side;
     const startedAt = Date.now();
     try {
-      const decision = await botsRef.current[side].decide({
-        side,
-        fen: current.fen(),
-        history: current.history(),
-        legalMoves: legalMoves(current),
-      });
+      const decision = await botsRef.current[side].decide(
+        buildBotContext(side, current, log, configsRef.current),
+      );
 
       // The log may have moved on while we were away (reset, or a race).
       if (pliesRef.current !== log) return;

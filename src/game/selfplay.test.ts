@@ -21,9 +21,12 @@ async function playOut(): Promise<{ result: MatchResult; plies: number }> {
     const moves = legalMoves(game);
     const decision = await bots[side].decide({
       side,
+      systemPrompt: "",
       fen: game.fen(),
       history: game.history(),
       legalMoves: moves,
+      ownRecentReasoning: [],
+      speechLog: [],
     });
     expect(moves).toContain(decision.san);
     game.move(decision.san);

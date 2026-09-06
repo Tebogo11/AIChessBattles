@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import { botFromConfig } from "../bots/fromConfig";
-import type { ChessBot } from "../bots/types";
 import { assignColors } from "../game/assignColors";
 import type { BotConfig } from "../game/botConfig";
 import type { Side } from "../game/types";
@@ -36,11 +34,11 @@ function LocalMatch({
   matchup: { white: BotConfig; black: BotConfig };
   onNewGame: () => void;
 }) {
-  const bots = useMemo<Record<Side, ChessBot>>(
-    () => ({ w: botFromConfig(matchup.white), b: botFromConfig(matchup.black) }),
+  const configs = useMemo<Record<Side, BotConfig>>(
+    () => ({ w: matchup.white, b: matchup.black }),
     [matchup],
   );
-  const match = useMatch({ bots });
+  const match = useMatch({ configs });
 
   return (
     <MatchScreen
