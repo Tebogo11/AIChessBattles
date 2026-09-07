@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AnthropicChatClient } from "./anthropicClient";
 import { ProviderError } from "./chatClient";
 import { GeminiChatClient } from "./geminiClient";
 import { OpenAIChatClient } from "./openaiClient";
@@ -95,6 +96,67 @@ describe("GeminiChatClient", () => {
     const client = new GeminiChatClient("gemini-2.0-flash", null);
     await expect(drain(client.stream([{ role: "user", content: "hi" }]))).rejects.toBeInstanceOf(
       ProviderError,
+    );
+  });
+});
+
+describe("AnthropicChatClient", () => {
+  it("refuses without a key, before any network call", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const client = new AnthropicChatClient("claude-opus-4-8", null);
+    await expect(drain(client.stream([{ role: "user", content: "hi" }]))).rejects.toBeInstanceOf(
+      ProviderError,
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("concatenates text from content_block_delta events, ignoring others", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sse([
+          'event: message_start\ndata: {"type":"message_start"}\n\n',
+          'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Che"}}\n\n',
+          'event: ping\ndata: {"type":"ping"}\n\n',
+          'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ck."}}\n\n',
+          'event: message_stop\ndata: {"type":"message_stop"}\n\n',
+        ]),
+      ),
+    );
+    const client = new AnthropicChatClient("claude-opus-4-8", "sk-ant");
+    expect(await drain(client.stream([{ role: "user", content: "hi" }]))).toBe("Check.");
+  });
+
+  it("sends the key and system prompt straight from the browser to Anthropic", async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValue(sse(['data: {"type":"message_stop"}\n\n']));
+    vi.stubGlobal("fetch", fetchSpy);
+    await drain(
+      new AnthropicChatClient("claude-opus-4-8", "sk-secret").stream([
+        { role: "system", content: "be terse" },
+        { role: "user", content: "move" },
+      ]),
+    );
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toContain("api.anthropic.com");
+    expect(init.headers["x-api-key"]).toBe("sk-secret");
+    expect(init.headers["anthropic-dangerous-direct-browser-access"]).toBe("true");
+    const body = JSON.parse(init.body);
+    expect(body.system).toBe("be terse");
+    expect(body.messages).toEqual([{ role: "user", content: "move" }]);
+    expect(body.max_tokens).toBeGreaterThan(0);
+  });
+
+  it("surfaces the verbatim error body on a bad request", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("model not found", { status: 404 })),
+    );
+    const client = new AnthropicChatClient("bogus", "sk-ant");
+    await expect(drain(client.stream([{ role: "user", content: "hi" }]))).rejects.toThrow(
+      /model not found/,
     );
   });
 });

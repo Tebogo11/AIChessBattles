@@ -1,7 +1,7 @@
 import type { Persona } from "./persona";
 
 /** Provider identifiers, shared with the Convex schema. */
-export type Provider = "random" | "ollama" | "openai" | "gemini";
+export type Provider = "random" | "ollama" | "openai" | "gemini" | "anthropic";
 
 /**
  * A bot as configured on the setup screen and stored on the match. Keys are

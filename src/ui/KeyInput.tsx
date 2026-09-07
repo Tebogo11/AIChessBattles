@@ -2,7 +2,11 @@ import { useState } from "react";
 import { getKey, setKey, type KeyedProvider } from "../bots/keyStore";
 
 const REPO_URL = "https://github.com/Tebogo11/AIChessBattles";
-const LABEL: Record<KeyedProvider, string> = { openai: "OpenAI", gemini: "Google" };
+const LABEL: Record<KeyedProvider, string> = {
+  openai: "OpenAI",
+  gemini: "Google",
+  anthropic: "Anthropic",
+};
 
 /**
  * The API-key input for one provider, shown once per provider only while it's

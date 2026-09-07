@@ -11,10 +11,10 @@ const PREFIX = "aicb_key_";
 const keyName = (p: Provider) => `${PREFIX}${p}`;
 
 /** Providers that require a user-supplied key (Ollama and random do not). */
-export type KeyedProvider = "openai" | "gemini";
+export type KeyedProvider = "openai" | "gemini" | "anthropic";
 
 export function providerNeedsKey(provider: Provider): provider is KeyedProvider {
-  return provider === "openai" || provider === "gemini";
+  return provider === "openai" || provider === "gemini" || provider === "anthropic";
 }
 
 function safeGet(storage: Storage, name: string): string | null {

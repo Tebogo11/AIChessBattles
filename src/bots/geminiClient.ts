@@ -5,7 +5,12 @@ import { sseData } from "./sse";
 import type { ChessBot } from "./types";
 
 /** Curated starting list; a free-text override handles anything newer (SPEC §9.1). */
-export const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"];
+export const GEMINI_MODELS = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+];
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 

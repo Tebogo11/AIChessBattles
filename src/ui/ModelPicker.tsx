@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { listOllamaModels } from "../bots/ollamaClient";
 import { OPENAI_MODELS } from "../bots/openaiClient";
 import { GEMINI_MODELS } from "../bots/geminiClient";
+import { ANTHROPIC_MODELS } from "../bots/anthropicClient";
 import type { Provider } from "../game/botConfig";
 
 const CURATED: Partial<Record<Provider, string[]>> = {
   openai: OPENAI_MODELS,
   gemini: GEMINI_MODELS,
+  anthropic: ANTHROPIC_MODELS,
 };
 
 const FREE_TEXT = "__other__";
@@ -55,6 +57,7 @@ export function ModelPicker({
           <option value="random">Random (no model)</option>
           <option value="ollama">Ollama (local)</option>
           <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
           <option value="gemini">Gemini</option>
         </select>
       </label>

@@ -7,7 +7,15 @@ import type { ChessBot } from "./types";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 /** Curated starting list; a free-text override handles anything newer (SPEC §9.1). */
-export const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o4-mini"];
+export const OPENAI_MODELS = [
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-4.1",
+  "gpt-4.1-mini",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "o4-mini",
+];
 
 /**
  * Streams from OpenAI's chat completions API. The key is passed in from the

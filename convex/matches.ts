@@ -19,6 +19,7 @@ const botConfig = v.object({
     v.literal("ollama"),
     v.literal("openai"),
     v.literal("gemini"),
+    v.literal("anthropic"),
   ),
   model: v.string(),
   persona: v.optional(persona),

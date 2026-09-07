@@ -1,4 +1,5 @@
 import type { BotConfig } from "../game/botConfig";
+import { AnthropicChatClient } from "./anthropicClient";
 import type { ChatClient } from "./chatClient";
 import { GeminiChatClient } from "./geminiClient";
 import { getKey } from "./keyStore";
@@ -22,6 +23,8 @@ export function clientFromConfig(config: BotConfig): ChatClient | null {
       return new OpenAIChatClient(config.model, getKey("openai"));
     case "gemini":
       return new GeminiChatClient(config.model, getKey("gemini"));
+    case "anthropic":
+      return new AnthropicChatClient(config.model, getKey("anthropic"));
     default:
       return null; // random has no model to call.
   }

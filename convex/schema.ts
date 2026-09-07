@@ -23,7 +23,13 @@ const botConfig = v.object({
   name: v.string(),
   /** Raw user prompt, before persona synthesis. */
   prompt: v.string(),
-  provider: v.union(v.literal("random"), v.literal("ollama"), v.literal("openai"), v.literal("gemini")),
+  provider: v.union(
+    v.literal("random"),
+    v.literal("ollama"),
+    v.literal("openai"),
+    v.literal("gemini"),
+    v.literal("anthropic"),
+  ),
   model: v.string(),
   /** Frozen persona, absent when synthesis was skipped or failed (SPEC §6). */
   persona: v.optional(persona),

@@ -10,6 +10,7 @@ describe("keyStore", () => {
   it("knows which providers need a key", () => {
     expect(providerNeedsKey("openai")).toBe(true);
     expect(providerNeedsKey("gemini")).toBe(true);
+    expect(providerNeedsKey("anthropic")).toBe(true);
     expect(providerNeedsKey("ollama")).toBe(false);
     expect(providerNeedsKey("random")).toBe(false);
   });
