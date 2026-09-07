@@ -33,6 +33,18 @@ export function MatchScreen({
         {subtitle ? <p className="app__tagline">{subtitle}</p> : null}
       </header>
 
+      {match.error ? (
+        <div className="error-banner" role="alert">
+          <div>
+            <strong>The match stalled.</strong>
+            <p className="error-banner__text">{match.error}</p>
+          </div>
+          <button type="button" onClick={match.play}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+
       <main className="board-layout">
         <BotPanel
           name={whiteName}

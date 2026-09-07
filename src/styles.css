@@ -402,3 +402,36 @@ body {
   border-radius: 999px;
   padding: 0 6px;
 }
+
+.error-banner {
+  max-width: 1280px;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #2a1618;
+  border: 1px solid #5a2a2f;
+  border-radius: 8px;
+  color: #ffb0b0;
+}
+
+.error-banner__text {
+  margin: 4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #ff9a9a;
+  word-break: break-word;
+}
+
+.error-banner button {
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #ff9a9a;
+  background: transparent;
+  color: #ffd0d0;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}

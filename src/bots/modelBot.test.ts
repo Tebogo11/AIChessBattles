@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ChatClient } from "./chatClient";
-import { createModelBot, MAX_ATTEMPTS } from "./modelBot";
+import { createModelBot, MAX_ATTEMPTS, PROVIDER_ATTEMPTS } from "./modelBot";
+import { ProviderError } from "./chatClient";
 import type { BotContext } from "./types";
 
 const ctx: BotContext = {
@@ -88,5 +89,54 @@ describe("createModelBot", () => {
     };
     await createModelBot("Tester", client).decide(ctx);
     expect(calls).toBe(MAX_ATTEMPTS);
+  });
+});
+
+describe("provider error handling", () => {
+  const failing = (times: number, then: string): ChatClient => {
+    let calls = 0;
+    return {
+      async *stream() {
+        calls++;
+        if (calls <= times) throw new ProviderError("rate limited", "test");
+        yield then;
+      },
+    };
+  };
+
+  it("retries a provider error with backoff, then succeeds", async () => {
+    const client = failing(2, "<thinking>t</thinking><speech></speech><move>e4</move>");
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const bot = createModelBot("Tester", client, { backoffBaseMs: 10, sleep });
+    const decision = await bot.decide(ctx);
+    expect(decision.san).toBe("e4");
+    // Two failures → two backoff waits, doubling.
+    expect(sleep).toHaveBeenCalledTimes(2);
+    expect(sleep.mock.calls[0][0]).toBe(10);
+    expect(sleep.mock.calls[1][0]).toBe(20);
+  });
+
+  it("propagates the provider's verbatim error after all attempts fail", async () => {
+    const client: ChatClient = {
+      async *stream() {
+        throw new ProviderError("invalid api key", "test");
+      },
+    };
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const bot = createModelBot("Tester", client, { backoffBaseMs: 1, sleep });
+    await expect(bot.decide(ctx)).rejects.toThrow("invalid api key");
+  });
+
+  it("makes exactly PROVIDER_ATTEMPTS attempts before giving up", async () => {
+    let calls = 0;
+    const client: ChatClient = {
+      async *stream() {
+        calls++;
+        throw new ProviderError("down", "test");
+      },
+    };
+    const bot = createModelBot("Tester", client, { backoffBaseMs: 1, sleep: async () => {} });
+    await expect(bot.decide(ctx)).rejects.toThrow();
+    expect(calls).toBe(PROVIDER_ATTEMPTS);
   });
 });

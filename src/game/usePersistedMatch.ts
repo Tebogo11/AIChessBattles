@@ -48,6 +48,7 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
   const [paused, setPaused] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [streaming, setStreaming] = useState<StreamingState | null>(null);
+  const [error, setError] = useState<string | null>(null);
   // Once the viewer resumes, this tab may drive even if the doc was briefly
   // still flagged stalled/stale.
   const [resumed, setResumed] = useState(false);
@@ -141,13 +142,18 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
       if (termination) {
         await finish({ matchId, winner: termination.winner, terminationReason: termination.reason });
       }
+    } catch (err) {
+      // A provider failed after its retries: stall the match (so any tab can
+      // resume it) and show the verbatim error. Never swap models (SPEC §8).
+      setError(err instanceof Error ? err.message : String(err));
+      await markStalled({ matchId });
     } finally {
       busyRef.current = false;
       setThinking(false);
       // The completed ply is now stored; the streamed fragments are transient.
       setStreaming(null);
     }
-  }, [append, finish, matchId]);
+  }, [append, finish, markStalled, matchId]);
 
   // Drive autoplay: each appended ply re-runs this and schedules the next.
   useEffect(() => {
@@ -156,9 +162,13 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
     return () => clearTimeout(timer);
   }, [runState, plies.length, runOnePly]);
 
-  const play = useCallback(() => setPaused(false), []);
+  const play = useCallback(() => {
+    setError(null);
+    setPaused(false);
+  }, []);
   const pause = useCallback(() => setPaused(true), []);
   const step = useCallback(() => {
+    setError(null);
     setPaused(true);
     void runOnePly();
   }, [runOnePly]);
@@ -170,13 +180,14 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
   const resume = useCallback(() => {
     setResumed(true);
     setPaused(false);
+    setError(null);
     void resumeMutation({ matchId });
   }, [resumeMutation, matchId]);
 
   const loaded = match !== undefined && rows !== undefined;
   const view: Match | null =
     loaded && match
-      ? { plies, runState, result: liveResult, fen, toMove, thinking, streaming, play, pause, step, reset }
+      ? { plies, runState, result: liveResult, fen, toMove, thinking, streaming, error, play, pause, step, reset }
       : null;
 
   return {

@@ -25,6 +25,8 @@ export interface Match {
   thinking: boolean;
   /** The in-flight reasoning/speech as it streams, or null between moves. */
   streaming: StreamingState | null;
+  /** A provider's verbatim error after retries were exhausted, or null (SPEC §8). */
+  error: string | null;
   play: () => void;
   pause: () => void;
   /** Advance exactly one ply. Only meaningful while paused. */
@@ -38,6 +40,7 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
   const [result, setResult] = useState<MatchResult | null>(null);
   const [thinking, setThinking] = useState(false);
   const [streaming, setStreaming] = useState<StreamingState | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const bots = useMemo<Record<Side, ChessBot>>(
     () => ({ w: botFromConfig(configs.w), b: botFromConfig(configs.b) }),
@@ -102,6 +105,11 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
         setResult(termination);
         setRunState("finished");
       }
+    } catch (err) {
+      // A provider failed after its retries: stall with the verbatim error and
+      // wait for the user to resume. Never swap to another model (SPEC §8).
+      setError(err instanceof Error ? err.message : String(err));
+      setRunState("paused");
     } finally {
       busyRef.current = false;
       setThinking(false);
@@ -118,6 +126,7 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
   }, [runState, plies.length, moveDelayMs, runOnePly]);
 
   const play = useCallback(() => {
+    setError(null); // Resuming after a provider error retries the same model.
     setRunState((s) => (s === "finished" ? s : "running"));
   }, []);
 
@@ -126,6 +135,7 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
   }, []);
 
   const step = useCallback(() => {
+    setError(null);
     setRunState((s) => (s === "running" ? "paused" : s));
     void runOnePly();
   }, [runOnePly]);
@@ -136,7 +146,8 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
     setResult(null);
     setRunState("idle");
     setStreaming(null);
+    setError(null);
   }, []);
 
-  return { plies, runState, result, fen, toMove, thinking, streaming, play, pause, step, reset };
+  return { plies, runState, result, fen, toMove, thinking, streaming, error, play, pause, step, reset };
 }
