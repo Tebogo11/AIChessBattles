@@ -15,6 +15,8 @@ interface SetupFlowProps {
   onConfirm: (white: BotConfig, black: BotConfig) => void;
   /** True while the match is being created after confirm. */
   creating?: boolean;
+  /** Pre-fill the setup forms, e.g. from "Edit prompts" (SPEC §9.4). */
+  initial?: { first: BotConfig; second: BotConfig };
 }
 
 /**
@@ -22,7 +24,7 @@ interface SetupFlowProps {
  * read both persona cards before committing (SPEC §6, §9.1). Shared by the
  * persisted and local routes; they differ only in what onConfirm does.
  */
-export function SetupFlow({ onConfirm, creating }: SetupFlowProps) {
+export function SetupFlow({ onConfirm, creating, initial }: SetupFlowProps) {
   const [phase, setPhase] = useState<Phase>({ name: "edit" });
 
   const start = async (values: SetupValues) => {
@@ -82,5 +84,5 @@ export function SetupFlow({ onConfirm, creating }: SetupFlowProps) {
     );
   }
 
-  return <SetupScreen onStart={(v) => void start(v)} />;
+  return <SetupScreen onStart={(v) => void start(v)} initial={initial} />;
 }

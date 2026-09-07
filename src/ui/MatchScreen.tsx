@@ -4,6 +4,7 @@ import { TERMINATION_LABEL } from "../game/types";
 import type { Match } from "../game/useMatch";
 import { useScrub } from "../game/useScrub";
 import { BotPanel } from "./BotPanel";
+import { ResultCard } from "./ResultCard";
 import { SpeechLog } from "./SpeechLog";
 
 interface MatchScreenProps {
@@ -14,6 +15,12 @@ interface MatchScreenProps {
   subtitle?: string;
   /** "New game" action. Local mode resets; persisted mode navigates. */
   onNewGame?: () => void;
+  /** A URL that opens this finished match for someone else (persisted only). */
+  shareUrl?: string;
+  /** Rematch with identical config. */
+  onRematch?: () => void;
+  /** Return to setup pre-filled with what was used. */
+  onEditPrompts?: () => void;
 }
 
 export function MatchScreen({
@@ -22,6 +29,9 @@ export function MatchScreen({
   blackName,
   subtitle,
   onNewGame,
+  shareUrl,
+  onRematch,
+  onEditPrompts,
 }: MatchScreenProps) {
   const { plies, runState, result, fen, toMove } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
@@ -67,6 +77,18 @@ export function MatchScreen({
               }}
             />
           </div>
+
+          {result && !scrub.scrubbing ? (
+            <ResultCard
+              result={result}
+              plies={plies}
+              whiteName={whiteName}
+              blackName={blackName}
+              shareUrl={shareUrl}
+              onRematch={onRematch}
+              onEditPrompts={onEditPrompts}
+            />
+          ) : null}
 
           <div className="statusbar" role="status">
             {scrub.scrubbing ? (

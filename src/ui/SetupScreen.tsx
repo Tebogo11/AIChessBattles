@@ -15,6 +15,8 @@ interface SetupScreenProps {
   onStart: (values: SetupValues) => void;
   /** Disabled + label change while a match is being created. */
   starting?: boolean;
+  /** Pre-fill the two forms, e.g. from "Edit prompts" (SPEC §9.4). */
+  initial?: { first: BotConfig; second: BotConfig };
 }
 
 interface BotDraft {
@@ -26,15 +28,22 @@ interface BotDraft {
 
 const EMPTY: BotDraft = { name: "", prompt: "", provider: "random", model: "" };
 
+const toDraft = (c: BotConfig): BotDraft => ({
+  name: c.name,
+  prompt: c.prompt,
+  provider: c.provider,
+  model: c.model,
+});
+
 /**
  * The setup screen from the wireframes: a name and a dominating prompt box per
  * bot, one-click presets, a per-bot model picker, and a colour choice. Any
  * provider can face any other (SPEC §11). API keys are requested only when a
  * keyed provider is selected, and once per provider (SPEC §9.1).
  */
-export function SetupScreen({ onStart, starting }: SetupScreenProps) {
-  const [first, setFirst] = useState<BotDraft>(EMPTY);
-  const [second, setSecond] = useState<BotDraft>(EMPTY);
+export function SetupScreen({ onStart, starting, initial }: SetupScreenProps) {
+  const [first, setFirst] = useState<BotDraft>(initial ? toDraft(initial.first) : EMPTY);
+  const [second, setSecond] = useState<BotDraft>(initial ? toDraft(initial.second) : EMPTY);
   const [randomizeColors, setRandomizeColors] = useState(true);
 
   const toConfig = (d: BotDraft, fallback: string): BotConfig => ({
