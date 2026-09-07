@@ -56,10 +56,10 @@ export function PersistedMatchRoute() {
         match={view}
         whiteName={displayName(doc.white)}
         blackName={displayName(doc.black)}
-        onNewGame={() => void navigate("/")}
+        onNewGame={() => void navigate("/new")}
         shareUrl={typeof window !== "undefined" ? window.location.href : undefined}
         onRematch={() => void rematch()}
-        onEditPrompts={() => void navigate("/", { state: { editConfigs: { white, black } } })}
+        onEditPrompts={() => void navigate("/new", { state: { editConfigs: { white, black } } })}
       />
     </>
   );

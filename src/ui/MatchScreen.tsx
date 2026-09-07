@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { MAX_FULL_MOVES } from "../game/engine";
 import { TERMINATION_LABEL } from "../game/types";
@@ -21,6 +22,8 @@ interface MatchScreenProps {
   onRematch?: () => void;
   /** Return to setup pre-filled with what was used. */
   onEditPrompts?: () => void;
+  /** Auto-walk a finished match from the start — the landing-page replay (SPEC §10). */
+  autoplayReplay?: boolean;
 }
 
 export function MatchScreen({
@@ -32,10 +35,30 @@ export function MatchScreen({
   shareUrl,
   onRematch,
   onEditPrompts,
+  autoplayReplay,
 }: MatchScreenProps) {
   const { plies, runState, result, fen, toMove } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
   const scrub = useScrub(plies, fen);
+
+  // Landing-page replay: walk a finished match from the start on a timer,
+  // reusing the same board, panels and speech log a live match uses (SPEC §10).
+  const { goTo } = scrub;
+  useEffect(() => {
+    if (!autoplayReplay || !result || plies.length === 0) return;
+    let i = -1;
+    goTo(-1);
+    const id = setInterval(() => {
+      i += 1;
+      if (i >= plies.length - 1) {
+        goTo(null);
+        clearInterval(id);
+      } else {
+        goTo(i);
+      }
+    }, 1100);
+    return () => clearInterval(id);
+  }, [autoplayReplay, result, plies.length, goTo]);
 
   return (
     <div className="app">

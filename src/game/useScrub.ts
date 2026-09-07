@@ -18,6 +18,8 @@ export interface Scrub {
   forward: () => void;
   /** Snap back to the live game. */
   live: () => void;
+  /** Jump to a specific ply index, or null for the live edge. */
+  goTo: (index: number | null) => void;
 }
 
 /**
@@ -42,6 +44,8 @@ export function useScrub(plies: Ply[], liveFen: string): Scrub {
   const forward = useCallback(() => setCursor((c) => stepForward(c, total)), [total]);
   const first = useCallback(() => setCursor(-1), []);
   const live = useCallback(() => setCursor(null), []);
+  // Jump the cursor to a specific ply (or null for live). Used by replay.
+  const goTo = useCallback((index: number | null) => setCursor(index), []);
 
   return {
     scrubbing: isScrubbing(cursor, total),
@@ -53,5 +57,6 @@ export function useScrub(plies: Ply[], liveFen: string): Scrub {
     back,
     forward,
     live,
+    goTo,
   };
 }
