@@ -4,6 +4,7 @@ import { TERMINATION_LABEL } from "../game/types";
 import type { Match } from "../game/useMatch";
 import { useScrub } from "../game/useScrub";
 import { BotPanel } from "./BotPanel";
+import { SpeechLog } from "./SpeechLog";
 
 interface MatchScreenProps {
   match: Match;
@@ -134,10 +135,13 @@ export function MatchScreen({
             ) : null}
           </div>
 
-          <section className="speech-log" aria-label="Match talk">
-            <h2>Match talk</h2>
-            <p className="speech-log__empty">Bots start talking once a real model is playing.</p>
-          </section>
+          <SpeechLog
+            plies={plies}
+            whiteName={whiteName}
+            blackName={blackName}
+            cutoff={scrub.viewedIndex}
+            streaming={match.streaming}
+          />
         </div>
 
         <BotPanel
