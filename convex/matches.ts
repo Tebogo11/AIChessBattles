@@ -1,6 +1,16 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+const persona = v.object({
+  name: v.string(),
+  traits: v.array(v.string()),
+  openingPreference: v.string(),
+  riskTolerance: v.string(),
+  speechRegister: v.string(),
+  catchphrases: v.array(v.string()),
+  systemPrompt: v.string(),
+});
+
 const botConfig = v.object({
   name: v.string(),
   prompt: v.string(),
@@ -11,6 +21,7 @@ const botConfig = v.object({
     v.literal("gemini"),
   ),
   model: v.string(),
+  persona: v.optional(persona),
 });
 
 /** Start a match. Returns the id that becomes the match URL. */

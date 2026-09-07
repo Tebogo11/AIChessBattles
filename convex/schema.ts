@@ -7,6 +7,17 @@ import { v } from "convex/values";
  * every ply. Separate ply rows let the client subscribe to a range. (SPEC §7)
  */
 
+/** The frozen persona synthesised at match start (SPEC §6). */
+const persona = v.object({
+  name: v.string(),
+  traits: v.array(v.string()),
+  openingPreference: v.string(),
+  riskTolerance: v.string(),
+  speechRegister: v.string(),
+  catchphrases: v.array(v.string()),
+  systemPrompt: v.string(),
+});
+
 /** Provider + model for one bot. Keys never live here — inference is client-side. */
 const botConfig = v.object({
   name: v.string(),
@@ -14,6 +25,8 @@ const botConfig = v.object({
   prompt: v.string(),
   provider: v.union(v.literal("random"), v.literal("ollama"), v.literal("openai"), v.literal("gemini")),
   model: v.string(),
+  /** Frozen persona, absent when synthesis was skipped or failed (SPEC §6). */
+  persona: v.optional(persona),
 });
 
 export default defineSchema({

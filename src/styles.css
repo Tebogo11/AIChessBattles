@@ -435,3 +435,75 @@ body {
   cursor: pointer;
   white-space: nowrap;
 }
+
+.persona-preview {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.persona {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.persona__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.persona__header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.persona__fields {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.persona__fields div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+}
+
+.persona__fields dt {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.persona__fields dd {
+  margin: 0;
+}
+
+.persona__raw {
+  color: var(--muted);
+}
+
+.persona__rawlabel {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.persona__rawprompt {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 720px) {
+  .persona-preview {
+    grid-template-columns: 1fr;
+  }
+}

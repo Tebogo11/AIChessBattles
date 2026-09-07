@@ -1,6 +1,7 @@
 import type { Chess } from "chess.js";
 import type { BotContext, SpeechEntry } from "../bots/types";
 import type { BotConfig } from "./botConfig";
+import { systemPromptFor } from "./botConfig";
 import { legalMoves } from "./engine";
 import type { Ply, Side } from "./types";
 
@@ -30,7 +31,7 @@ export function buildBotContext(
 
   return {
     side,
-    systemPrompt: configs[side].prompt,
+    systemPrompt: systemPromptFor(configs[side]),
     fen: game.fen(),
     history: game.history(),
     legalMoves: legalMoves(game),

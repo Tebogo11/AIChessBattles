@@ -2,29 +2,28 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
-import { assignColors } from "../game/assignColors";
-import { SetupScreen, type SetupValues } from "../ui/SetupScreen";
+import type { BotConfig } from "../game/botConfig";
+import { SetupFlow } from "../ui/SetupFlow";
 
 /**
- * The setup screen for the persisted app: collect prompts, create a match with
- * them stored, and redirect to its URL (SPEC §9.1). Colour is assigned at
- * creation so the stored white/black already reflect the choice (SPEC §4.6).
+ * The setup flow for the persisted app: edit prompts, preview personas, then
+ * create a match with the frozen personas stored on it and redirect to its URL
+ * (SPEC §6, §9.1).
  */
 export function NewMatchRoute() {
   const create = useMutation(api.matches.create);
   const navigate = useNavigate();
-  const [starting, setStarting] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const start = async (values: SetupValues) => {
-    setStarting(true);
-    const { white, black } = assignColors(values.first, values.second, values.randomizeColors);
+  const confirm = async (white: BotConfig, black: BotConfig) => {
+    setCreating(true);
     try {
       const id = await create({ white, black });
       void navigate(`/match/${id}`);
     } catch {
-      setStarting(false);
+      setCreating(false);
     }
   };
 
-  return <SetupScreen onStart={(v) => void start(v)} starting={starting} />;
+  return <SetupFlow onConfirm={(w, b) => void confirm(w, b)} creating={creating} />;
 }
