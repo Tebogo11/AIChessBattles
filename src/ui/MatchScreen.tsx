@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
-import type { Side } from "../game/types";
+import type { EvalEngine } from "../analysis/evalEngine";
+import type { BotConfig } from "../game/botConfig";
+import { capturesAfter, materialAdvantage } from "../game/captures";
 import { MAX_FULL_MOVES } from "../game/engine";
+import type { Side } from "../game/types";
 import { TERMINATION_LABEL } from "../game/types";
 import type { Match } from "../game/useMatch";
 import { useScrub } from "../game/useScrub";
-import { BotPanel } from "./BotPanel";
+import { BotCard } from "./BotCard";
+import { ReasoningBlock } from "./ReasoningBlock";
 import { ResultCard } from "./ResultCard";
 import { SpeechLog } from "./SpeechLog";
 
@@ -13,6 +17,9 @@ interface MatchScreenProps {
   match: Match;
   whiteName: string;
   blackName: string;
+  /** Provider, model and prompt for the bot cards, when the caller has them. */
+  whiteConfig?: BotConfig;
+  blackConfig?: BotConfig;
   /** Shown under the header; used to flag local-only mode. */
   subtitle?: string;
   /** "New game" action. Local mode resets; persisted mode navigates. */
@@ -25,27 +32,45 @@ interface MatchScreenProps {
   onEditPrompts?: () => void;
   /** Auto-walk a finished match from the start — the landing-page replay (SPEC §10). */
   autoplayReplay?: boolean;
+  /** Injected analysis engine factory; tests pass a fake. */
+  createEngine?: () => EvalEngine;
 }
 
+/**
+ * The match view: bot cards left, board centre, conversation right, reasoning
+ * below. Every column is a fixed pixel width and every growing region — the
+ * reasoning lanes, the speech log — scrolls inside a box of predetermined
+ * height, so a bot streaming a long thought cannot move the board under the
+ * cursor (#15).
+ */
 export function MatchScreen({
   match,
   whiteName,
   blackName,
+  whiteConfig,
+  blackConfig,
   subtitle,
   onNewGame,
   shareUrl,
   onRematch,
   onEditPrompts,
   autoplayReplay,
+  createEngine,
 }: MatchScreenProps) {
   const { plies, runState, result, fen, toMove } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
   const scrub = useScrub(plies, fen);
-  // On a phone the thoughts panels live behind a tap; one bot at a time (SPEC §9.2).
-  const [openThoughts, setOpenThoughts] = useState<Side | null>(null);
+  // On a phone the cards live behind a tap; both bots in one sheet (SPEC §9.2).
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // Captures are derived from the log at the position being viewed, so the row
+  // always agrees with the board — live or scrubbed, fresh or shared.
+  const captures = useMemo(() => capturesAfter(plies, scrub.viewingPly), [plies, scrub.viewingPly]);
+  const advantage = materialAdvantage(captures);
+  const stumbles = (side: Side) => plies.filter((p) => p.side === side && p.stumble).length;
 
   // Landing-page replay: walk a finished match from the start on a timer,
-  // reusing the same board, panels and speech log a live match uses (SPEC §10).
+  // reusing the same board, cards and speech log a live match uses (SPEC §10).
   const { goTo } = scrub;
   useEffect(() => {
     if (!autoplayReplay || !result || plies.length === 0) return;
@@ -62,6 +87,31 @@ export function MatchScreen({
     }, 1100);
     return () => clearInterval(id);
   }, [autoplayReplay, result, plies.length, goTo]);
+
+  const cards = (
+    <>
+      <BotCard
+        name={whiteName}
+        side="w"
+        config={whiteConfig}
+        active={toMove === "w"}
+        thinking={match.streaming?.side === "w"}
+        captures={captures.w}
+        advantage={advantage?.side === "w" ? advantage.points : null}
+        stumbles={stumbles("w")}
+      />
+      <BotCard
+        name={blackName}
+        side="b"
+        config={blackConfig}
+        active={toMove === "b"}
+        thinking={match.streaming?.side === "b"}
+        captures={captures.b}
+        advantage={advantage?.side === "b" ? advantage.points : null}
+        stumbles={stumbles("b")}
+      />
+    </>
+  );
 
   return (
     <div className="app">
@@ -83,24 +133,12 @@ export function MatchScreen({
       ) : null}
 
       <main className="board-layout">
-        <div className="side-panel">
-          <BotPanel
-            name={whiteName}
-            side="w"
-            plies={plies}
-            active={toMove === "w"}
-            streaming={match.streaming}
-            viewedIndex={scrub.viewedIndex}
-          />
-        </div>
+        <div className="col col--bots">{cards}</div>
 
-        <div className="board-column">
+        <div className="col col--board">
           <div className="mobile-thoughts">
-            <button type="button" onClick={() => setOpenThoughts("w")}>
-              {whiteName}’s thoughts{match.streaming?.side === "w" ? " •" : ""}
-            </button>
-            <button type="button" onClick={() => setOpenThoughts("b")}>
-              {blackName}’s thoughts{match.streaming?.side === "b" ? " •" : ""}
+            <button type="button" onClick={() => setDetailsOpen(true)}>
+              Bot details
             </button>
           </div>
 
@@ -114,18 +152,6 @@ export function MatchScreen({
               }}
             />
           </div>
-
-          {result && !scrub.scrubbing ? (
-            <ResultCard
-              result={result}
-              plies={plies}
-              whiteName={whiteName}
-              blackName={blackName}
-              shareUrl={shareUrl}
-              onRematch={onRematch}
-              onEditPrompts={onEditPrompts}
-            />
-          ) : null}
 
           <div className="statusbar" role="status">
             {scrub.scrubbing ? (
@@ -148,10 +174,20 @@ export function MatchScreen({
           </div>
 
           <div className="transport transport--scrub">
-            <button type="button" onClick={scrub.first} disabled={plies.length === 0} title="First position">
+            <button
+              type="button"
+              onClick={scrub.first}
+              disabled={plies.length === 0}
+              title="First position"
+            >
               ⏮
             </button>
-            <button type="button" onClick={scrub.back} disabled={plies.length === 0} title="Back one ply">
+            <button
+              type="button"
+              onClick={scrub.back}
+              disabled={plies.length === 0}
+              title="Back one ply"
+            >
               ←
             </button>
             <button
@@ -194,6 +230,21 @@ export function MatchScreen({
             ) : null}
           </div>
 
+          {result && !scrub.scrubbing ? (
+            <ResultCard
+              result={result}
+              plies={plies}
+              whiteName={whiteName}
+              blackName={blackName}
+              shareUrl={shareUrl}
+              onRematch={onRematch}
+              onEditPrompts={onEditPrompts}
+              createEngine={createEngine}
+            />
+          ) : null}
+        </div>
+
+        <div className="col col--talk">
           <SpeechLog
             plies={plies}
             whiteName={whiteName}
@@ -202,39 +253,29 @@ export function MatchScreen({
             streaming={match.streaming}
           />
         </div>
-
-        <div className="side-panel">
-          <BotPanel
-            name={blackName}
-            side="b"
-            plies={plies}
-            active={toMove === "b"}
-            streaming={match.streaming}
-            viewedIndex={scrub.viewedIndex}
-          />
-        </div>
       </main>
 
-      {openThoughts ? (
-        <div className="drawer" role="dialog" aria-label="Bot thoughts">
+      <ReasoningBlock
+        plies={plies}
+        whiteName={whiteName}
+        blackName={blackName}
+        streaming={match.streaming}
+        viewedIndex={scrub.viewedIndex}
+      />
+
+      {detailsOpen ? (
+        <div className="drawer" role="dialog" aria-label="Bot details">
           <button
             type="button"
             className="drawer__scrim"
             aria-label="Close"
-            onClick={() => setOpenThoughts(null)}
+            onClick={() => setDetailsOpen(false)}
           />
           <div className="drawer__sheet">
-            <button type="button" className="drawer__close" onClick={() => setOpenThoughts(null)}>
+            <button type="button" className="drawer__close" onClick={() => setDetailsOpen(false)}>
               Close ✕
             </button>
-            <BotPanel
-              name={openThoughts === "w" ? whiteName : blackName}
-              side={openThoughts}
-              plies={plies}
-              active={toMove === openThoughts}
-              streaming={match.streaming}
-              viewedIndex={scrub.viewedIndex}
-            />
+            {cards}
           </div>
         </div>
       ) : null}

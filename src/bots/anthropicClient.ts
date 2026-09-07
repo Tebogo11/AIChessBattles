@@ -6,15 +6,32 @@ import type { ChessBot } from "./types";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-/** Cap the reply; the tagged sections are short, so this is plenty. */
-const MAX_TOKENS = 1024;
+/**
+ * Cap the reply. The tagged sections are short, but on models where thinking is
+ * on by default (Opus 5 and the rest of the 4.6+ family) the thinking tokens
+ * count against this cap too — 1024 truncated the answer before <move> arrived.
+ */
+const MAX_TOKENS = 8192;
 
 /** Curated starting list; a free-text override handles anything newer (SPEC §9.1). */
 export const ANTHROPIC_MODELS = [
+  "claude-opus-5",
+  "claude-sonnet-5",
   "claude-opus-4-8",
+  "claude-opus-4-7",
+  "claude-opus-4-6",
   "claude-sonnet-4-6",
-  "claude-haiku-4-5-20251001",
+  "claude-haiku-4-5",
+  "claude-fable-5-1",
 ];
+
+/**
+ * Picking a move is a small task, so the lowest effort keeps latency and cost
+ * down. `output_config` is ignored by the older models that don't take it, but
+ * Sonnet 4.5 and earlier reject it, so it's only sent for the models that
+ * support it.
+ */
+const NO_EFFORT_SUPPORT = /^claude-(haiku-4-5|sonnet-4-5|3)/;
 
 /**
  * Streams from Anthropic's Messages API. Anthropic takes the system prompt as a
@@ -59,6 +76,9 @@ export class AnthropicChatClient implements ChatClient {
         body: JSON.stringify({
           model: this.model,
           max_tokens: MAX_TOKENS,
+          ...(NO_EFFORT_SUPPORT.test(this.model)
+            ? {}
+            : { output_config: { effort: "low" } }),
           ...(system ? { system } : {}),
           messages: anthropicMessages,
           stream: true,

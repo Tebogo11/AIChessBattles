@@ -1,6 +1,15 @@
 import { useState } from "react";
+import type { EvalEngine } from "../analysis/evalEngine";
+import { reasoningMarkdown, type ExportInput } from "../game/exportMarkdown";
+import { matchPgn } from "../game/exportPgn";
+import { matchSlug } from "../game/moveLabel";
 import { TERMINATION_LABEL } from "../game/types";
 import type { MatchResult, Ply } from "../game/types";
+import { downloadText } from "./download";
+import { GameAnalysis } from "./GameAnalysis";
+
+/** Where a downloaded PGN can be replayed, for people who have no chess app. */
+const PGN_VIEWER_URL = "https://chesstempo.com/pgn-viewer/";
 
 interface ResultCardProps {
   result: MatchResult;
@@ -13,13 +22,17 @@ interface ResultCardProps {
   onRematch?: () => void;
   /** Return to setup pre-filled with what was used. */
   onEditPrompts?: () => void;
+  /** Injected engine factory for the analysis; tests pass a fake. */
+  createEngine?: () => EvalEngine;
 }
 
 /**
  * The card shown the moment a match ends (any termination, including the 150-
  * move cap). The stumble count per bot is the payoff of #8 — comparative model
- * data no other chess demo surfaces. Nothing auto-navigates; the user just
- * watched a game end (SPEC §9.4).
+ * data no other chess demo surfaces. Everything the user can take away lives
+ * here too: the reasoning, the moves, and an engine reading of who was actually
+ * winning (#15). Nothing auto-navigates; the user just watched a game end
+ * (SPEC §9.4).
  */
 export function ResultCard({
   result,
@@ -29,6 +42,7 @@ export function ResultCard({
   shareUrl,
   onRematch,
   onEditPrompts,
+  createEngine,
 }: ResultCardProps) {
   const [copied, setCopied] = useState(false);
   const stumbles = (side: "w" | "b") => plies.filter((p) => p.side === side && p.stumble).length;
@@ -36,6 +50,9 @@ export function ResultCard({
   const headline = result.winner
     ? `${result.winner === "w" ? whiteName : blackName} wins`
     : "Draw";
+
+  const exportInput: ExportInput = { plies, whiteName, blackName, result };
+  const slug = matchSlug(whiteName, blackName);
 
   const share = async () => {
     if (!shareUrl) return;
@@ -85,6 +102,41 @@ export function ResultCard({
           </button>
         ) : null}
       </div>
+
+      <div className="resultcard__downloads">
+        <button
+          type="button"
+          onClick={() =>
+            downloadText(`${slug}-reasoning.md`, reasoningMarkdown(exportInput), "text/markdown")
+          }
+        >
+          ⬇ Download reasoning (.md)
+        </button>
+        <button
+          type="button"
+          onClick={() => downloadText(`${slug}.pgn`, matchPgn(exportInput), "application/x-chess-pgn")}
+        >
+          ⬇ Download PGN
+        </button>
+        <a
+          className="resultcard__viewer"
+          href={PGN_VIEWER_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Replay it at chesstempo →
+        </a>
+      </div>
+      <p className="resultcard__hint">
+        Download the PGN first, then paste it into the chesstempo viewer to walk through the game.
+      </p>
+
+      <GameAnalysis
+        plies={plies}
+        whiteName={whiteName}
+        blackName={blackName}
+        createEngine={createEngine}
+      />
     </div>
   );
 }

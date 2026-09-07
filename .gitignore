@@ -15,3 +15,6 @@ tsconfig.tsbuildinfo
 
 # Convex codegen AI guidelines (tooling state)
 convex/_generated/ai/
+
+# Stockfish engine, copied out of node_modules at build time
+public/stockfish/
