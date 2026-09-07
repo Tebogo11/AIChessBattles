@@ -70,6 +70,8 @@ function Replay({
           match={view}
           whiteName={nameOf(doc.white)}
           blackName={nameOf(doc.black)}
+          whiteConfig={doc.white}
+          blackConfig={doc.black}
           autoplayReplay
           onRematch={onRunYourOwn}
         />

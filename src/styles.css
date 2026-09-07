@@ -38,17 +38,22 @@ body {
   font-size: 13px;
 }
 
+/* Fixed pixel columns, no fr and no minmax: nothing in the match view may
+   respond to its own content, only to the viewport (#15). 300 + 520 + 360 plus
+   two 20px gaps = 1220px, inside the 1280px page cap. */
 .board-layout {
   display: grid;
-  grid-template-columns: 1fr minmax(320px, 520px) 1fr;
+  grid-template-columns: 300px 520px 360px;
   gap: 20px;
   align-items: start;
+  justify-content: center;
 }
 
-.board-column {
+.col {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .board {
@@ -91,36 +96,10 @@ body {
   cursor: default;
 }
 
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px;
-  min-height: 240px;
-}
 
-.panel--active {
-  border-color: var(--accent);
-}
 
-.panel__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
 
-.panel__header h2 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
 
-.panel__status {
-  margin-left: auto;
-  color: var(--accent);
-  font-size: 12px;
-}
 
 .dot {
   width: 10px;
@@ -137,51 +116,12 @@ body {
   background: #23252e;
 }
 
-.panel__stumbles {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #ffb37a;
-}
 
-.panel__moves {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 420px;
-  overflow-y: auto;
-  font-size: 13px;
-}
 
-.panel__moves li {
-  display: flex;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--line);
-}
 
-.panel__movenum {
-  color: var(--muted);
-  min-width: 28px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
 
-.panel__san {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
 
-.panel__thinking {
-  margin: 2px 0 0;
-  color: var(--muted);
-  white-space: pre-wrap;
-}
 
-.panel__empty,
-.speech-log__empty {
-  color: var(--muted);
-  font-size: 13px;
-  margin: 0;
-}
 
 .speech-log {
   background: var(--surface);
@@ -356,24 +296,8 @@ body {
   }
 }
 
-.panel__live {
-  background: var(--surface-2);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
-}
 
-.panel__saying {
-  margin: 8px 0 0;
-  color: var(--text);
-  font-style: italic;
-}
 
-.panel__cursor {
-  animation: blink 1s steps(2, start) infinite;
-  color: var(--accent);
-}
 
 @keyframes blink {
   to {
@@ -381,27 +305,8 @@ body {
   }
 }
 
-.panel__moveline {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
 
-.panel__move--viewed {
-  background: rgba(124, 156, 255, 0.14);
-  border-radius: 6px;
-  margin: 0 -6px;
-  padding: 4px 6px;
-}
 
-.panel__stumbletag {
-  margin-left: auto;
-  font-size: 11px;
-  color: #ffb37a;
-  border: 1px solid #4a3f20;
-  border-radius: 999px;
-  padding: 0 6px;
-}
 
 .error-banner {
   max-width: 1280px;
@@ -766,8 +671,8 @@ body {
     grid-template-columns: 1fr;
   }
 
-  /* The two side thought panels are hidden; the board + speech log lead. */
-  .side-panel {
+  /* The bot cards move behind the "Bot details" button; board + talk lead. */
+  .col--bots {
     display: none;
   }
 
@@ -833,5 +738,434 @@ body {
   }
   to {
     transform: translateX(0);
+  }
+}
+
+/* --- #15: fixed layout, bot cards, reasoning lanes, analysis ------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Between the full 1220px grid and the phone stack, the talk column drops
+   under the board rather than any column being squeezed. */
+@media (max-width: 1259px) {
+  .board-layout {
+    grid-template-columns: 300px 520px;
+  }
+
+  .col--talk {
+    grid-column: 1 / -1;
+  }
+}
+
+.botcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.botcard--active {
+  border-color: var(--accent);
+}
+
+.botcard__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.botcard__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botcard__badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.botcard__badge--w {
+  background: #f2f2f2;
+  color: #12131a;
+}
+
+.botcard__badge--b {
+  background: #23252e;
+  color: #e7e9f0;
+}
+
+.botcard__status {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.botcard__model {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botcard__promptwrap {
+  margin-top: 8px;
+}
+
+.botcard__prompt {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* Clamped so the card is the same height whatever the prompt says; the
+   expander opens it in place. */
+.botcard__prompt--clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.botcard__captures {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  min-height: 34px;
+}
+
+.botcard__caplabel {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.botcard__glyphs {
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -1px;
+  word-break: break-all;
+}
+
+.botcard__advantage {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ee6a5;
+  border: 1px solid #2f5a37;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.botcard__stumbles {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #ffb37a;
+}
+
+/* The speech log sits beside the board and scrolls inside a fixed box, so the
+   conversation is always in view and never lengthens the page. */
+.col--talk .speech-log__list {
+  height: 520px;
+  max-height: none;
+}
+
+/* Reasoning: half the page width, centred, one lane per bot. */
+.reasoning {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  width: 50%;
+  margin: 24px auto 0;
+}
+
+.lane {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.lane__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lane__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lane__status {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* The fix for the reported bug: an explicit height, decided before any token
+   arrives, so a growing stream cannot reflow anything outside this box. */
+.lane__scroll {
+  height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.lane__moves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+.lane__move {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lane__move--viewed {
+  background: rgba(124, 156, 255, 0.14);
+  border-radius: 6px;
+  margin: 0 -6px;
+  padding: 6px;
+}
+
+.lane__moveline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lane__movenum {
+  color: var(--muted);
+  min-width: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lane__san {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.lane__stumbletag {
+  margin-left: auto;
+  font-size: 11px;
+  color: #ffb37a;
+  border: 1px solid #4a3f20;
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.lane__thinking {
+  margin: 2px 0 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lane__live {
+  margin-top: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.lane__saying {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-style: italic;
+}
+
+.lane__cursor {
+  animation: blink 1s steps(2, start) infinite;
+  color: var(--accent);
+}
+
+/* Downloads and the third-party viewer link. */
+.resultcard__downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.resultcard__downloads button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.resultcard__viewer {
+  color: var(--accent);
+}
+
+.resultcard__hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.analysis {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.analysis button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.analysis__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.analysis__progress p {
+  margin: 0;
+}
+
+.analysis__error {
+  color: #ffb0b0;
+  font-size: 13px;
+}
+
+.analysis__caveat {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.evalchart {
+  margin-top: 12px;
+}
+
+/* The chart itself is a fixed size; only its viewport scrolls. */
+.evalchart__scroll {
+  overflow-x: auto;
+}
+
+.evalchart__legend {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.evalchart__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  display: inline-block;
+}
+
+.swatch--w {
+  background: #e8e8ea;
+}
+
+.swatch--b {
+  background: #3a3f52;
+}
+
+.swatch--stumble {
+  background: #ffb37a;
+  border-radius: 50%;
+}
+
+.botform__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.botform__title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.botform__hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.setup__colours {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  /* On a phone the half-width rule would leave two unreadable columns. */
+  .reasoning {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .col--talk .speech-log__list {
+    height: 300px;
   }
 }

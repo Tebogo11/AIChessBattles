@@ -40,11 +40,15 @@ const toDraft = (c: BotConfig): BotDraft => ({
  * bot, one-click presets, a per-bot model picker, and a colour choice. Any
  * provider can face any other (SPEC §11). API keys are requested only when a
  * keyed provider is selected, and once per provider (SPEC §9.1).
+ *
+ * The first form plays White and the second plays Black, and the headings say
+ * so. Randomising is opt-in rather than the default, because a label that is
+ * only true half the time is worse than no label at all (#15).
  */
 export function SetupScreen({ onStart, starting, initial }: SetupScreenProps) {
   const [first, setFirst] = useState<BotDraft>(initial ? toDraft(initial.first) : EMPTY);
   const [second, setSecond] = useState<BotDraft>(initial ? toDraft(initial.second) : EMPTY);
-  const [randomizeColors, setRandomizeColors] = useState(true);
+  const [randomizeColors, setRandomizeColors] = useState(false);
 
   const toConfig = (d: BotDraft, fallback: string): BotConfig => ({
     name: d.name.trim() || fallback,
@@ -71,6 +75,16 @@ export function SetupScreen({ onStart, starting, initial }: SetupScreenProps) {
     });
   };
 
+  const labels = randomizeColors
+    ? {
+        first: { title: "Bot A", hint: "Colour drawn at random", placeholder: "Bot A name" },
+        second: { title: "Bot B", hint: "Colour drawn at random", placeholder: "Bot B name" },
+      }
+    : {
+        first: { title: "White", hint: "This bot plays White and moves first", placeholder: "White bot name" },
+        second: { title: "Black", hint: "This bot plays Black", placeholder: "Black bot name" },
+      };
+
   return (
     <div className="app">
       <header className="app__header">
@@ -81,12 +95,18 @@ export function SetupScreen({ onStart, starting, initial }: SetupScreenProps) {
         </p>
       </header>
 
+      <p className="setup__colours">
+        {randomizeColors
+          ? "Colours will be drawn at random when the match starts."
+          : "The first bot plays White, the second plays Black."}
+      </p>
+
       <div className="setup">
-        <BotForm title="Bot A" draft={first} onChange={setFirst} />
+        <BotForm labels={labels.first} side="w" draft={first} onChange={setFirst} />
         <div className="setup__vs" aria-hidden="true">
           VS
         </div>
-        <BotForm title="Bot B" draft={second} onChange={setSecond} />
+        <BotForm labels={labels.second} side="b" draft={second} onChange={setSecond} />
       </div>
 
       {keyedProviders.length > 0 ? (
@@ -127,20 +147,28 @@ export function SetupScreen({ onStart, starting, initial }: SetupScreenProps) {
 }
 
 function BotForm({
-  title,
+  labels,
+  side,
   draft,
   onChange,
 }: {
-  title: string;
+  labels: { title: string; hint: string; placeholder: string };
+  /** Only drives the colour dot; randomised matches still show the form order. */
+  side: "w" | "b";
   draft: BotDraft;
   onChange: (d: BotDraft) => void;
 }) {
   return (
-    <section className="botform" aria-label={title}>
+    <section className="botform" aria-label={labels.title}>
+      <header className="botform__header">
+        <span className={`dot dot--${side}`} aria-hidden="true" />
+        <h2 className="botform__title">{labels.title}</h2>
+        <span className="botform__hint">{labels.hint}</span>
+      </header>
       <input
         className="botform__name"
         type="text"
-        placeholder={`${title} name`}
+        placeholder={labels.placeholder}
         value={draft.name}
         onChange={(e) => onChange({ ...draft, name: e.target.value })}
       />

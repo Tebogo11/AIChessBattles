@@ -59,6 +59,8 @@ function LocalMatch({
       match={match}
       whiteName={matchup.white.persona?.name || matchup.white.name}
       blackName={matchup.black.persona?.name || matchup.black.name}
+      whiteConfig={matchup.white}
+      blackConfig={matchup.black}
       subtitle="Local-only mode — set VITE_CONVEX_URL to persist matches and get shareable links."
       onNewGame={onNewGame}
       onRematch={match.reset}

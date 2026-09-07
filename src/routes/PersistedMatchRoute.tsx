@@ -56,6 +56,8 @@ export function PersistedMatchRoute() {
         match={view}
         whiteName={displayName(doc.white)}
         blackName={displayName(doc.black)}
+        whiteConfig={white}
+        blackConfig={black}
         onNewGame={() => void navigate("/new")}
         shareUrl={typeof window !== "undefined" ? window.location.href : undefined}
         onRematch={() => void rematch()}
