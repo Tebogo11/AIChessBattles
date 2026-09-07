@@ -1,6 +1,9 @@
 import { useState } from "react";
-import type { BotConfig } from "../game/botConfig";
+import { providerNeedsKey, type KeyedProvider } from "../bots/keyStore";
+import type { BotConfig, Provider } from "../game/botConfig";
 import { PRESETS } from "../game/presets";
+import { KeyInput } from "./KeyInput";
+import { ModelPicker } from "./ModelPicker";
 
 export interface SetupValues {
   first: BotConfig;
@@ -17,15 +20,17 @@ interface SetupScreenProps {
 interface BotDraft {
   name: string;
   prompt: string;
+  provider: Provider;
+  model: string;
 }
 
-const EMPTY: BotDraft = { name: "", prompt: "" };
+const EMPTY: BotDraft = { name: "", prompt: "", provider: "random", model: "" };
 
 /**
  * The setup screen from the wireframes: a name and a dominating prompt box per
- * bot, one-click presets, and a colour choice. Prompts are used directly as each
- * bot's instructions — the fallback path the persona design already allows
- * (SPEC §6, §9.1). Model selection arrives in a later ticket.
+ * bot, one-click presets, a per-bot model picker, and a colour choice. Any
+ * provider can face any other (SPEC §11). API keys are requested only when a
+ * keyed provider is selected, and once per provider (SPEC §9.1).
  */
 export function SetupScreen({ onStart, starting }: SetupScreenProps) {
   const [first, setFirst] = useState<BotDraft>(EMPTY);
@@ -35,12 +40,18 @@ export function SetupScreen({ onStart, starting }: SetupScreenProps) {
   const toConfig = (d: BotDraft, fallback: string): BotConfig => ({
     name: d.name.trim() || fallback,
     prompt: d.prompt.trim(),
-    // Only the random mover exists so far; real providers are chosen here later.
-    provider: "random",
-    model: "",
+    provider: d.provider,
+    model: d.model.trim(),
   });
 
-  const canStart = first.prompt.trim().length > 0 && second.prompt.trim().length > 0;
+  const promptsReady = first.prompt.trim().length > 0 && second.prompt.trim().length > 0;
+  const modelReady = (d: BotDraft) => d.provider === "random" || d.model.trim().length > 0;
+  const canStart = promptsReady && modelReady(first) && modelReady(second);
+
+  // Distinct keyed providers currently selected — a key is asked once each.
+  const keyedProviders = Array.from(
+    new Set([first.provider, second.provider].filter(providerNeedsKey)),
+  ) as KeyedProvider[];
 
   const submit = () => {
     if (!canStart || starting) return;
@@ -56,8 +67,8 @@ export function SetupScreen({ onStart, starting }: SetupScreenProps) {
       <header className="app__header">
         <h1>AI Chess Battles</h1>
         <p className="app__tagline">
-          Write a prompt for each bot, then start the match. A prompt can be a
-          one-line strategy or a whole character.
+          Write a prompt for each bot, pick a model, then start the match. A
+          prompt can be a one-line strategy or a whole character.
         </p>
       </header>
 
@@ -68,6 +79,14 @@ export function SetupScreen({ onStart, starting }: SetupScreenProps) {
         </div>
         <BotForm title="Bot B" draft={second} onChange={setSecond} />
       </div>
+
+      {keyedProviders.length > 0 ? (
+        <div className="setup__keys">
+          {keyedProviders.map((p) => (
+            <KeyInput key={p} provider={p} />
+          ))}
+        </div>
+      ) : null}
 
       <div className="setup__footer">
         <label className="setup__toggle">
@@ -88,7 +107,11 @@ export function SetupScreen({ onStart, starting }: SetupScreenProps) {
         </button>
       </div>
       {!canStart ? (
-        <p className="setup__hint">Give each bot a prompt to start — try a preset.</p>
+        <p className="setup__hint">
+          {promptsReady
+            ? "Choose a model for each bot to start."
+            : "Give each bot a prompt to start — try a preset."}
+        </p>
       ) : null}
     </div>
   );
@@ -125,13 +148,19 @@ function BotForm({
             key={p.label}
             type="button"
             className="chip"
-            onClick={() => onChange({ name: draft.name || p.name, prompt: p.prompt })}
+            onClick={() => onChange({ ...draft, name: draft.name || p.name, prompt: p.prompt })}
             title={p.prompt}
           >
             {p.label}
           </button>
         ))}
       </div>
+      <ModelPicker
+        provider={draft.provider}
+        model={draft.model}
+        onProvider={(provider) => onChange({ ...draft, provider, model: "" })}
+        onModel={(model) => onChange({ ...draft, model })}
+      />
     </section>
   );
 }

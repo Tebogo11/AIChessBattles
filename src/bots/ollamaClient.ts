@@ -26,11 +26,21 @@ export class OllamaChatClient implements ChatClient {
         body: JSON.stringify({ model: this.model, messages, stream: true }),
         signal,
       });
-    } catch (err) {
+    } catch {
       // A browser reaching a visitor's local Ollama fails here without the right
-      // CORS allowance. #11 turns this into a specific, actionable message.
+      // CORS allowance. Give the exact fix rather than a generic network error
+      // (SPEC §9.3). Safari is stricter than Chrome about such requests.
+      const origin = typeof window !== "undefined" ? window.location.origin : "this page";
       throw new ProviderError(
-        `Could not reach Ollama at ${this.baseUrl}. Is it running, and does OLLAMA_ORIGINS allow this page? (${String(err)})`,
+        [
+          `Could not reach Ollama at ${this.baseUrl}.`,
+          `1. Is Ollama running? Start it with: ollama serve`,
+          `2. Allow this page to talk to it by setting OLLAMA_ORIGINS to include ${origin}, then restart Ollama:`,
+          `   (macOS)  launchctl setenv OLLAMA_ORIGINS "${origin}"`,
+          `   (Linux)  OLLAMA_ORIGINS="${origin}" ollama serve`,
+          `   (Windows) set OLLAMA_ORIGINS=${origin}  then restart Ollama`,
+          `Safari is stricter than Chrome about this.`,
+        ].join("\n"),
         "ollama",
       );
     }
