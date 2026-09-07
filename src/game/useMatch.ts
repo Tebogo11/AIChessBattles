@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { botFromConfig } from "../bots/fromConfig";
+import { parseTaggedResponse } from "../bots/parseTaggedResponse";
 import type { ChessBot } from "../bots/types";
 import type { BotConfig } from "./botConfig";
 import { buildBotContext } from "./buildContext";
 import { detectTermination, replay } from "./engine";
-import type { MatchResult, Ply, RunState, Side } from "./types";
+import type { MatchResult, Ply, RunState, Side, StreamingState } from "./types";
 
 export interface UseMatchOptions {
   configs: Record<Side, BotConfig>;
@@ -22,6 +23,8 @@ export interface Match {
   toMove: Side | null;
   /** True while a bot is deciding. */
   thinking: boolean;
+  /** The in-flight reasoning/speech as it streams, or null between moves. */
+  streaming: StreamingState | null;
   play: () => void;
   pause: () => void;
   /** Advance exactly one ply. Only meaningful while paused. */
@@ -34,6 +37,7 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
   const [runState, setRunState] = useState<RunState>("idle");
   const [result, setResult] = useState<MatchResult | null>(null);
   const [thinking, setThinking] = useState(false);
+  const [streaming, setStreaming] = useState<StreamingState | null>(null);
 
   const bots = useMemo<Record<Side, ChessBot>>(
     () => ({ w: botFromConfig(configs.w), b: botFromConfig(configs.b) }),
@@ -63,10 +67,18 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
     busyRef.current = true;
     setThinking(true);
     const side = current.turn() as Side;
+    setStreaming({ side, thinking: "", speech: "" });
     const startedAt = Date.now();
     try {
       const decision = await botsRef.current[side].decide(
         buildBotContext(side, current, log, configsRef.current),
+        {
+          // Parse the partial buffer so reasoning appears word by word (SPEC §5).
+          onDelta: (buffer) => {
+            const parsed = parseTaggedResponse(buffer);
+            setStreaming({ side, thinking: parsed.thinking, speech: parsed.speech });
+          },
+        },
       );
 
       // The log may have moved on while we were away (reset, or a race).
@@ -93,6 +105,8 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
     } finally {
       busyRef.current = false;
       setThinking(false);
+      // The completed ply is now in the log; the streamed fragments are transient.
+      setStreaming(null);
     }
   }, []);
 
@@ -121,7 +135,8 @@ export function useMatch({ configs, moveDelayMs = 350 }: UseMatchOptions): Match
     pliesRef.current = [];
     setResult(null);
     setRunState("idle");
+    setStreaming(null);
   }, []);
 
-  return { plies, runState, result, fen, toMove, thinking, play, pause, step, reset };
+  return { plies, runState, result, fen, toMove, thinking, streaming, play, pause, step, reset };
 }

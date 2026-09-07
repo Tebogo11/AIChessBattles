@@ -39,6 +39,13 @@ export interface MatchResult {
 /** What the match runner is doing right now. */
 export type RunState = "idle" | "running" | "paused" | "finished";
 
+/** The in-flight decision, parsed from the still-growing response (SPEC §5, #7). */
+export interface StreamingState {
+  side: Side;
+  thinking: string;
+  speech: string;
+}
+
 export const TERMINATION_LABEL: Record<TerminationReason, string> = {
   checkmate: "Checkmate",
   stalemate: "Stalemate",

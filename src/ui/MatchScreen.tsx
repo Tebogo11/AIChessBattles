@@ -22,7 +22,7 @@ export function MatchScreen({
   subtitle,
   onNewGame,
 }: MatchScreenProps) {
-  const { plies, runState, result, fen, toMove, thinking } = match;
+  const { plies, runState, result, fen, toMove } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
   const scrub = useScrub(plies, fen);
 
@@ -39,7 +39,8 @@ export function MatchScreen({
           side="w"
           plies={plies}
           active={toMove === "w"}
-          thinking={thinking}
+          streaming={match.streaming}
+          viewedIndex={scrub.viewedIndex}
         />
 
         <div className="board-column">
@@ -132,7 +133,8 @@ export function MatchScreen({
           side="b"
           plies={plies}
           active={toMove === "b"}
-          thinking={thinking}
+          streaming={match.streaming}
+          viewedIndex={scrub.viewedIndex}
         />
       </main>
     </div>

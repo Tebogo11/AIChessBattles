@@ -3,11 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { botFromConfig } from "../bots/fromConfig";
+import { parseTaggedResponse } from "../bots/parseTaggedResponse";
 import { buildBotContext } from "./buildContext";
 import { detectTermination, replay } from "./engine";
 import { toPly } from "./toPly";
 import type { Match } from "./useMatch";
-import type { RunState, Side } from "./types";
+import type { RunState, Side, StreamingState } from "./types";
 
 /**
  * A match still marked "running" but silent for this long is treated as stalled:
@@ -46,6 +47,7 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
 
   const [paused, setPaused] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [streaming, setStreaming] = useState<StreamingState | null>(null);
   // Once the viewer resumes, this tab may drive even if the doc was briefly
   // still flagged stalled/stale.
   const [resumed, setResumed] = useState(false);
@@ -107,11 +109,18 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
     busyRef.current = true;
     setThinking(true);
     const side = current.turn() as Side;
+    setStreaming({ side, thinking: "", speech: "" });
     const config = side === "w" ? m.white : m.black;
     const startedAt = Date.now();
     try {
       const decision = await botFromConfig(config).decide(
         buildBotContext(side, current, log, { w: m.white, b: m.black }),
+        {
+          onDelta: (buffer) => {
+            const parsed = parseTaggedResponse(buffer);
+            setStreaming({ side, thinking: parsed.thinking, speech: parsed.speech });
+          },
+        },
       );
       current.move(decision.san);
       // Idempotent on (matchId, index): a duplicate append is a no-op, so a
@@ -135,6 +144,8 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
     } finally {
       busyRef.current = false;
       setThinking(false);
+      // The completed ply is now stored; the streamed fragments are transient.
+      setStreaming(null);
     }
   }, [append, finish, matchId]);
 
@@ -165,7 +176,7 @@ export function usePersistedMatch(matchId: Id<"matches">): PersistedMatch {
   const loaded = match !== undefined && rows !== undefined;
   const view: Match | null =
     loaded && match
-      ? { plies, runState, result: liveResult, fen, toMove, thinking, play, pause, step, reset }
+      ? { plies, runState, result: liveResult, fen, toMove, thinking, streaming, play, pause, step, reset }
       : null;
 
   return {

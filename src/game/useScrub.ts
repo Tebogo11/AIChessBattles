@@ -11,6 +11,8 @@ export interface Scrub {
   /** 1-based ply being viewed, and the total, for a "3 / 40" caption. */
   viewingPly: number;
   totalPlies: number;
+  /** 0-based index of the ply being reviewed, or null when following live. */
+  viewedIndex: number | null;
   first: () => void;
   back: () => void;
   forward: () => void;
@@ -46,6 +48,7 @@ export function useScrub(plies: Ply[], liveFen: string): Scrub {
     fen,
     viewingPly: effective === null ? total : effective + 1,
     totalPlies: total,
+    viewedIndex: effective !== null && effective >= 0 ? effective : null,
     first,
     back,
     forward,

@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 
 # ralph-loop local state
 **/.claude/ralph-loop.local.md
+
+# Convex codegen AI guidelines (tooling state)
+convex/_generated/ai/
