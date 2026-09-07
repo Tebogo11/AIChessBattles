@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Chessboard } from "react-chessboard";
+import type { Side } from "../game/types";
 import { MAX_FULL_MOVES } from "../game/engine";
 import { TERMINATION_LABEL } from "../game/types";
 import type { Match } from "../game/useMatch";
@@ -40,6 +41,8 @@ export function MatchScreen({
   const { plies, runState, result, fen, toMove } = match;
   const fullMove = Math.floor(plies.length / 2) + 1;
   const scrub = useScrub(plies, fen);
+  // On a phone the thoughts panels live behind a tap; one bot at a time (SPEC §9.2).
+  const [openThoughts, setOpenThoughts] = useState<Side | null>(null);
 
   // Landing-page replay: walk a finished match from the start on a timer,
   // reusing the same board, panels and speech log a live match uses (SPEC §10).
@@ -80,16 +83,27 @@ export function MatchScreen({
       ) : null}
 
       <main className="board-layout">
-        <BotPanel
-          name={whiteName}
-          side="w"
-          plies={plies}
-          active={toMove === "w"}
-          streaming={match.streaming}
-          viewedIndex={scrub.viewedIndex}
-        />
+        <div className="side-panel">
+          <BotPanel
+            name={whiteName}
+            side="w"
+            plies={plies}
+            active={toMove === "w"}
+            streaming={match.streaming}
+            viewedIndex={scrub.viewedIndex}
+          />
+        </div>
 
         <div className="board-column">
+          <div className="mobile-thoughts">
+            <button type="button" onClick={() => setOpenThoughts("w")}>
+              {whiteName}’s thoughts{match.streaming?.side === "w" ? " •" : ""}
+            </button>
+            <button type="button" onClick={() => setOpenThoughts("b")}>
+              {blackName}’s thoughts{match.streaming?.side === "b" ? " •" : ""}
+            </button>
+          </div>
+
           <div className="board">
             <Chessboard
               options={{
@@ -189,15 +203,41 @@ export function MatchScreen({
           />
         </div>
 
-        <BotPanel
-          name={blackName}
-          side="b"
-          plies={plies}
-          active={toMove === "b"}
-          streaming={match.streaming}
-          viewedIndex={scrub.viewedIndex}
-        />
+        <div className="side-panel">
+          <BotPanel
+            name={blackName}
+            side="b"
+            plies={plies}
+            active={toMove === "b"}
+            streaming={match.streaming}
+            viewedIndex={scrub.viewedIndex}
+          />
+        </div>
       </main>
+
+      {openThoughts ? (
+        <div className="drawer" role="dialog" aria-label="Bot thoughts">
+          <button
+            type="button"
+            className="drawer__scrim"
+            aria-label="Close"
+            onClick={() => setOpenThoughts(null)}
+          />
+          <div className="drawer__sheet">
+            <button type="button" className="drawer__close" onClick={() => setOpenThoughts(null)}>
+              Close ✕
+            </button>
+            <BotPanel
+              name={openThoughts === "w" ? whiteName : blackName}
+              side={openThoughts}
+              plies={plies}
+              active={toMove === openThoughts}
+              streaming={match.streaming}
+              viewedIndex={scrub.viewedIndex}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

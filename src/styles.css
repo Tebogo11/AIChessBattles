@@ -707,3 +707,131 @@ body {
 .resultcard__actions .setup__start {
   border-color: var(--accent);
 }
+
+.landing-bar {
+  max-width: 1280px;
+  margin: 0 auto 8px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.landing-bar button {
+  margin-left: auto;
+}
+
+.gallery__title {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.gallery {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gallery a {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.gallery a:hover {
+  border-color: var(--accent);
+}
+
+/* --- Mobile: board + speech log by default; thoughts behind a tap (SPEC §9.2) */
+.mobile-thoughts {
+  display: none;
+}
+
+.drawer {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .board-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* The two side thought panels are hidden; the board + speech log lead. */
+  .side-panel {
+    display: none;
+  }
+
+  .mobile-thoughts {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobile-thoughts button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* The thoughts slide-over, one bot at a time. */
+  .drawer {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+  }
+
+  .drawer__scrim {
+    position: absolute;
+    inset: 0;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .drawer__sheet {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: min(92vw, 420px);
+    background: var(--bg);
+    border-left: 1px solid var(--line);
+    padding: 14px;
+    overflow-y: auto;
+    animation: slidein 0.18s ease-out;
+  }
+
+  .drawer__close {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+@keyframes slidein {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
